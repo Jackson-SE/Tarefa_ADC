@@ -46,7 +46,7 @@ pico_enable_stdio_usb(tarefa_ADC 1)
 
 # Add the standard library to the build
 target_link_libraries(tarefa_ADC
-        pico_stdlib)
+        pico_stdlib hardware_adc)
 
 # Add the standard include files to the build
 target_include_directories(tarefa_ADC PRIVATE
