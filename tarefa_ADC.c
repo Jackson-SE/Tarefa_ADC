@@ -6,7 +6,8 @@ Residente.: Jackson da Silva Carneiro   TIC370100907
 
 #include <stdio.h>            
 #include "pico/stdlib.h"      
-#include "hardware/adc.h"    
+#include "hardware/adc.h"  
+#include "hardware/pwm.h"  
 
                     // GPIOs para o joystick, botão e LEDs
 #define joyVRX_PIN 26           
@@ -17,8 +18,15 @@ Residente.: Jackson da Silva Carneiro   TIC370100907
 #define LED_PIN_RED 13   
 #define P_BUTTON_A 5
 
-void configura_GPIO(){
-    // Configuração dos pinos GPIO 26 e 27 para leitura analógica do ADC.
+const float DIVISOR_PWM = 16.0;
+const uint16_t PERIODO_PWM = 4096;
+uint16_t level_led_blue, level_led_red = 100;
+uint slice_led_blue, slice_led_red;
+const int ADC_CHANNEL_0 = 0;
+const int ADC_CHANNEL_1 = 1;
+
+void config_joystick(){   // FUNÇÃO PARA CONFIGURAR O JOYSTICK
+
     adc_gpio_init(joyVRX_PIN); // Configura adc do GP26 (ADC0) para o eixo X do joystick.
     adc_gpio_init(joyVRY_PIN); // Configura adc do GP27 (ADC1) para o eixo Y do joystick.
 
@@ -27,6 +35,9 @@ void configura_GPIO(){
     gpio_set_dir(BUTTON_SW_PIN, GPIO_IN);
     gpio_pull_up(BUTTON_SW_PIN); // Habilitação de pull-up interno.
 
+}
+void configura_GPIO(){   //  FUNÇÃO PARA CONFIGURAR OS LED'S E PUSH BUTTON A
+    
     // Configuração dos pinos dos LEDs como saída.
     gpio_init(LED_PIN_BLUE);
     gpio_set_dir(LED_PIN_BLUE, GPIO_OUT);
@@ -44,48 +55,56 @@ void configura_GPIO(){
 
 }
 
+void config_led_pwm(uint led, uint *slice, uint16_t level){
+
+    gpio_set_function(led, GPIO_FUNC_PWM);   // configuração do pino do led como saída
+    *slice = pwm_gpio_to_slice_num(led);    // obtenção do slice associado ao pino
+    pwm_set_clkdiv(*slice, DIVISOR_PWM);   //  definição do divisor de clock
+    pwm_set_wrap(*slice, PERIODO_PWM);    //   definição do período
+    pwm_set_gpio_level(led, level);      //  definição do nível inicial do pwm
+    pwm_set_enabled(*slice, true);      //   habilitação do pwm no slice correspondente
+
+}
+
+void joystick_read(uint16_t *vrx_value, uint16_t *vry_value){
+
+    adc_select_input(ADC_CHANNEL_0); // canal adc para eixo X
+    sleep_us(2);
+    *vrx_value = adc_read();  //lê o valor do eixo X
+
+    adc_select_input(ADC_CHANNEL_1);  // canal adc para eixo Y
+    sleep_us(2);
+    *vry_value = adc_read();   // lê o valor do eixo Y
+}
+
 int main() {
     
     stdio_init_all();
     adc_init();
+    config_joystick();
     configura_GPIO();
+    uint16_t vrx_value, vry_value;
+                        // configuração do pwm para os led's azul e vermelho
+    setup_pwm_led(LED_PIN_BLUE, &slice_led_blue, level_led_blue);
+    setup_pwm_led(LED_PIN_RED, &slice_led_red, level_led_red);
 
     
     while (true) {
-        // Leitura do valor do ADC para Eixo X do joystick
-        adc_select_input(0); // Seleciona canal 0 (GP26 - VRX)
-        uint16_t vrx_value = adc_read(); 
-
-        // Leitura do valor do ADC para Eixo Y do joystick
-        adc_select_input(1); // Seleciona canal 1 (GP27 - VRY)
-        uint16_t vry_value = adc_read(); 
 
         // Leitura do estado do botão do joystick (SW)
         bool sw_value = gpio_get(BUTTON_SW_PIN) == 0; // 0 indica que o botão está pressionado.
 
-        // Controle do LED1 baseado no valor do ADC0 (VRX)
-        if (vrx_value > 2100) {
-            gpio_put(LED_PIN_RED, true); // Liga o LED1.
-        } else {
-            gpio_put(LED_PIN_RED, false); // Desliga o LED1.
-        }
+joystick_read(&vrx_value, &vry_value);
 
-        // Controle do LED2 baseado no valor do ADC1 (VRY)
-        if (vry_value > 2100) {
-            gpio_put(LED_PIN_BLUE, true); // Liga o LED2.
-        } else {
-            gpio_put(LED_PIN_BLUE, false); // Desliga o LED2.
-        }
+pwm_set_gpio_level(LED_PIN_BLUE, vry_value);
+pwm_set_gpio_level(LED_PIN_RED, vrx_value);
 
-        // Controle do LED3 baseado no estado do botão (SW_PIN)
         if (sw_value) { // Verifica se o botão no pino 22 está pressionado
             gpio_put(LED_PIN_GREEN, true); // Liga o LED3.
         } else {
             gpio_put(LED_PIN_GREEN, false); // Desliga o LED3.
         }
-
-
-        // Introduz um atraso de 500 milissegundos antes de repetir a leitura.
+        // atraso de 500 ms antes de repetir a leitura.
         sleep_ms(500);
     }
 
