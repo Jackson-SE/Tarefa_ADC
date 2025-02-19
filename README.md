@@ -1,5 +1,7 @@
-# TAREFA: CONVERSOR A/D
+#  CONVERSORES A/D
 
-Implementação de código em resolução da tarefa proposta para o capítulo 8 Unidade 4
+Unidade 4 | Capítulo 8 
+
+
 
 # Residente.: Jackson da Silva Carneiro
