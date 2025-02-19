@@ -1,6 +1,6 @@
 /*          EMBARCATECH
 Código desenvolvido para atendimento da proposta da tarefa: Conversores A/D
-Residente.: Jackson da Silva Carneiro
+Residente.: Jackson da Silva Carneiro   TIC370100907
 */
                        //inclusão das bibliotecas
 
